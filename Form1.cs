@@ -11,11 +11,15 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Compression;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 namespace simple_updater
 {
     public partial class Form1 : Form
     {
+        JObject settings = JObject.Parse(File.ReadAllText("settings.txt"));
+
+
         public Form1()
         {
             InitializeComponent();
@@ -25,6 +29,7 @@ namespace simple_updater
 
         private async void Form1_Load(object sender, EventArgs e)
         {
+            
             FileDownloadResult res = new FileDownloadResult { success = false, filename = "" };
             try
             {
@@ -68,12 +73,7 @@ namespace simple_updater
 
                 try
                 {
-                    string appExe = Directory.GetParent(Application.StartupPath).ToString() + "\\" + File.ReadAllText("updateExe.txt");
-                    ProcessStartInfo info = new ProcessStartInfo(appExe);
-                    info.FileName = appExe;
-                    info.WorkingDirectory = Path.GetDirectoryName(appExe);
-                    Process p = Process.Start(info);
-                    p.WaitForInputIdle();
+                    RunExeAfterUpdate();
                 }
                 catch(Exception eeee)
                 {
@@ -84,8 +84,37 @@ namespace simple_updater
 
                 Environment.Exit(0);
             }
+            
         }
 
+        void RunExeAfterUpdate()
+        {
+            string appExe = Directory.GetParent(Application.StartupPath).ToString() + "\\" + File.ReadAllText("updateExe.txt");
+            switch (settings["updateExeType"].ToString())
+            {
+                case ("containsString"):
+                    string extension = settings["updateExeExtension"].ToString();
+                    string[] files = System.IO.Directory.GetFiles(Directory.GetParent(Application.StartupPath).ToString(), "*." + extension);
+
+                    foreach (string filename in files)
+                    {
+                        if (filename.Contains(Path.GetFileName(appExe)))
+                        {
+                            appExe = filename;
+                        }
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+
+            ProcessStartInfo info = new ProcessStartInfo(appExe);
+            info.FileName = appExe;
+            info.WorkingDirectory = Path.GetDirectoryName(appExe);
+            Process p = Process.Start(info);
+            p.WaitForInputIdle();
+        }
 
         void Empty(System.IO.DirectoryInfo directory)
         {
